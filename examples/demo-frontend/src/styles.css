@@ -1,0 +1,11 @@
+/* Deliberately plain: this app exists to be read by the DevLatch impact scanner. */
+body { font-family: system-ui, sans-serif; margin: 0; color: #1c1c1c; }
+header { padding: 12px 20px; background: #1c1c1c; color: #fff; }
+nav { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid #ddd; }
+nav button { padding: 6px 12px; cursor: pointer; }
+nav button[aria-current="page"] { font-weight: 700; }
+main { padding: 20px; max-width: 720px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #eee; }
+.tag { margin-right: 6px; padding: 1px 6px; background: #eee; border-radius: 4px; }
+.error { color: #b00020; }

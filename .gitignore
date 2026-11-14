@@ -1,0 +1,7 @@
+bin/
+coverage.out
+node_modules/
+dist/
+.DS_Store
+
+scanner/node_modules/

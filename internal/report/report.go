@@ -79,23 +79,23 @@ func detail(v diff.Violation) string {
 // Text writes a human-readable report grouped by endpoint.
 func Text(w io.Writer, vs []diff.Violation, color bool) {
 	if len(vs) == 0 {
-		fmt.Fprintln(w, paint(color, green, "No drift detected."))
+		_, _ = fmt.Fprintln(w, paint(color, green, "No drift detected."))
 		return
 	}
 	last := ""
 	for _, v := range vs {
 		if v.Endpoint != last {
 			if last != "" {
-				fmt.Fprintln(w)
+				_, _ = fmt.Fprintln(w)
 			}
-			fmt.Fprintln(w, paint(color, bold, v.Endpoint))
+			_, _ = fmt.Fprintln(w, paint(color, bold, v.Endpoint))
 			last = v.Endpoint
 		}
 		tag := paint(color, sevColor(v.Severity), fmt.Sprintf("%-8s", v.Severity))
-		fmt.Fprintf(w, "  %s %-22s %s%s\n", tag, v.Type, v.Path, detail(v))
+		_, _ = fmt.Fprintf(w, "  %s %-22s %s%s\n", tag, v.Type, v.Path, detail(v))
 	}
 	b, wn, s := Count(vs)
-	fmt.Fprintf(w, "\n%d breaking, %d warning, %d safe\n", b, wn, s)
+	_, _ = fmt.Fprintf(w, "\n%d breaking, %d warning, %d safe\n", b, wn, s)
 }
 
 type Summary struct {

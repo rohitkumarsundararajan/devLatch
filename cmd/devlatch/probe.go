@@ -47,7 +47,7 @@ func probeOnce(ctx context.Context, client *http.Client, u string, headers map[s
 	if err != nil {
 		return 0, nil, "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	return resp.StatusCode, body, resp.Header.Get("Content-Type"), err
 }

@@ -11,7 +11,7 @@ func loadCases(t *testing.T) []Case {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	cases, err := LoadDataset(f)
 	if err != nil {
 		t.Fatal(err)

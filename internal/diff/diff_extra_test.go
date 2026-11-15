@@ -20,7 +20,7 @@ func TestDiffMultiEndpoint(t *testing.T) {
 	live := map[string]*infer.Node{
 		"GET /b 200":     mk("STRING"),
 		"GET /a 200":     mk("STRING"),
-		"GET /empty 200": &infer.Node{Kinds: map[infer.Kind]int{}, Samples: 0},
+		"GET /empty 200": {Kinds: map[infer.Kind]int{}, Samples: 0},
 		"GET /nil 200":   mk("STRING"),
 		"GET /new 200":   mk("STRING"),
 	}

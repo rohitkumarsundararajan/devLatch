@@ -88,12 +88,14 @@ func Scan(script, tsconfig string, drifts []Drift) ([]Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if _, err := tmp.Write(in); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return nil, err
 	}
-	tmp.Close()
+	if err := tmp.Close(); err != nil {
+		return nil, err
+	}
 
 	cmd := exec.Command(node, script, "--input", tmp.Name(), "--json")
 	var out, errb bytes.Buffer

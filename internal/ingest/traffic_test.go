@@ -51,7 +51,7 @@ func TestReplayMatchesLive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	replayed := infer.NewStore(infer.DefaultConfig())
 	acc, skip, err := Replay(f, replayed)
 	if err != nil {

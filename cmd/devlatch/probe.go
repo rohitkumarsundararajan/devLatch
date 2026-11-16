@@ -76,6 +76,7 @@ func runProbe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	record := fs.Bool("record", false, "save what was observed as a proposal (then run devlatch approve) instead of checking")
 	failOn := fs.String("fail-on", "breaking", "exit 1 on this severity or worse: breaking or warning")
 	format := fs.String("format", "text", "output format: text, json or markdown")
+	renames := fs.Bool("renames", true, "report likely renames as POSSIBLE_RENAME instead of REMOVED_KEY + ADDED_KEY")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return exitOK
@@ -203,7 +204,7 @@ func runProbe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		return exitOK
 	}
 
-	vs := diff.Diff(baseline.ToNodes(), live, diff.Options{MinSamples: *minSamples})
+	vs := diff.Diff(baseline.ToNodes(), live, diff.Options{MinSamples: *minSamples, Renames: *renames})
 	expected := make([]string, 0, len(baseline.Endpoints))
 	for k := range baseline.Endpoints {
 		expected = append(expected, k)

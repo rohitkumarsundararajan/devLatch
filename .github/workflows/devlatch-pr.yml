@@ -1,0 +1,21 @@
+name: API Contract Check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  devlatch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: DevLatch contract check
+        uses: ./action
+        with:
+          working-directory: examples/demo-ci

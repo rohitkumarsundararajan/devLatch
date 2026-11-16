@@ -1,0 +1,80 @@
+name: DevLatch API contract check
+description: Replay recorded API traffic against the approved contract, fail on breaking drift, and comment on the pull request.
+author: DevLatch
+
+inputs:
+  working-directory:
+    description: Directory that contains the .devlatch folder (approved contract and config)
+    default: "."
+  traffic:
+    description: Recorded traffic JSONL file, relative to working-directory
+    default: ".devlatch/traffic.jsonl"
+  fail-on:
+    description: Fail on this severity or worse (breaking or warning)
+    default: "breaking"
+  min-samples:
+    description: Responses needed per endpoint before a field counts as required (empty uses the DevLatch default)
+    default: ""
+  comment:
+    description: Post or update one sticky PR comment with the report (needs pull-requests write permission)
+    default: "true"
+
+outputs:
+  exit-code:
+    description: "DevLatch exit code: 0 ok, 1 drift at or above fail-on, 2 tool error"
+    value: ${{ steps.check.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: ${{ github.action_path }}/../go.mod
+        cache: false
+
+    - name: Build DevLatch
+      shell: bash
+      run: |
+        cd "${{ github.action_path }}/.."
+        go build -o "$RUNNER_TEMP/devlatch" ./cmd/devlatch
+
+    - name: Check traffic against the contract
+      id: check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TRAFFIC: ${{ inputs.traffic }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        MIN_SAMPLES: ${{ inputs.min-samples }}
+      run: |
+        report="$RUNNER_TEMP/devlatch-report.md"
+        args=(check --from "$TRAFFIC" --format markdown --fail-on "$FAIL_ON")
+        if [ -n "$MIN_SAMPLES" ]; then args+=(--min-samples "$MIN_SAMPLES"); fi
+        set +e
+        "$RUNNER_TEMP/devlatch" "${args[@]}" > "$report"
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+        if [ -s "$report" ]; then
+          echo "has-report=true" >> "$GITHUB_OUTPUT"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request' && steps.check.outputs.has-report == 'true'
+      continue-on-error: true
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        header: devlatch
+        path: ${{ steps.check.outputs.report }}
+
+    - name: Fail the job on drift
+      if: steps.check.outputs.exit-code != '0'
+      shell: bash
+      env:
+        CODE: ${{ steps.check.outputs.exit-code }}
+      run: |
+        echo "::error::DevLatch exit code $CODE (1 = drift at or above the fail-on level, 2 = tool error). See the report above."
+        exit "$CODE"

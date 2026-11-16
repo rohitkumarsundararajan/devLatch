@@ -1,0 +1,53 @@
+name: API Drift Watch
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      mutate:
+        description: "Demo API mutation that simulates drift (empty = no drift), e.g. rename_user_name"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Start the demo API
+        env:
+          MUTATE: ${{ inputs.mutate }}
+        run: |
+          go build -o "$RUNNER_TEMP/demo-backend" ./examples/demo-backend
+          if [ -n "$MUTATE" ]; then
+            nohup "$RUNNER_TEMP/demo-backend" -addr 127.0.0.1:8000 -mutate "$MUTATE" > "$RUNNER_TEMP/demo.log" 2>&1 &
+          else
+            nohup "$RUNNER_TEMP/demo-backend" -addr 127.0.0.1:8000 > "$RUNNER_TEMP/demo.log" 2>&1 &
+          fi
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/healthz > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "demo API did not start" >&2
+          cat "$RUNNER_TEMP/demo.log" >&2
+          exit 1
+
+      - name: Probe the API
+        uses: ./action/probe
+        with:
+          working-directory: examples/demo-ci
+          base: http://127.0.0.1:8000
+          paths: /api/v1/users,/api/v1/users/1,/api/v1/orders,/api/v1/stats/daily

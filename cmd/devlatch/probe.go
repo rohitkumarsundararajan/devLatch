@@ -213,16 +213,17 @@ func runProbe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	diff.SortViolations(vs)
 
 	info := stdout
-	if *format == "json" {
+	switch *format {
+	case "json":
 		info = stderr
 		if err := report.JSON(stdout, vs); err != nil {
 			_, _ = fmt.Fprintln(stderr, "devlatch probe:", err)
 			return exitError
 		}
-	} else if *format == "markdown" {
+	case "markdown":
 		info = stderr
 		report.Markdown(stdout, vs)
-	} else {
+	default:
 		report.Text(stdout, vs, os.Getenv("NO_COLOR") == "")
 	}
 	var fresh []string

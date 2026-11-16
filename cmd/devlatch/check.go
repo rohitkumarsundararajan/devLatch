@@ -104,14 +104,15 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	live := collapseEndpoints(store.Snapshot())
 	vs := diff.Diff(base.ToNodes(), live, diff.Options{MinSamples: *minSamples, Renames: *renames})
 
-	if *format == "json" {
+	switch *format {
+	case "json":
 		if err := report.JSON(stdout, vs); err != nil {
 			_, _ = fmt.Fprintln(stderr, "devlatch check:", err)
 			return exitError
 		}
-	} else if *format == "markdown" {
+	case "markdown":
 		report.Markdown(stdout, vs)
-	} else {
+	default:
 		_, _ = fmt.Fprintln(stdout)
 		report.Text(stdout, vs, os.Getenv("NO_COLOR") == "")
 	}

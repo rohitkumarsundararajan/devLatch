@@ -62,8 +62,11 @@ func TestProbeFlow(t *testing.T) {
 	}
 
 	mode.Store(1)
-	if code, o, _ := probe(); code != exitDrift || !strings.Contains(o, "REMOVED_KEY") || !strings.Contains(o, "$.name") {
+	if code, o, _ := probe("--renames=false"); code != exitDrift || !strings.Contains(o, "REMOVED_KEY") || !strings.Contains(o, "$.name") {
 		t.Fatalf("renamed field should exit 1 with REMOVED_KEY (%d): %s", code, o)
+	}
+	if code, o, _ := probe(); code != exitDrift || !strings.Contains(o, "POSSIBLE_RENAME") || !strings.Contains(o, "$.full_name") {
+		t.Fatalf("default probe should report the rename as POSSIBLE_RENAME (%d): %s", code, o)
 	}
 	mode.Store(2)
 	if code, o, _ := probe(); code != exitDrift || !strings.Contains(o, "ENDPOINT_MISSING") {

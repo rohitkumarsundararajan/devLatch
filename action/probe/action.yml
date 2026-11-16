@@ -1,0 +1,123 @@
+name: DevLatch API drift probe
+description: Call an API once, compare it with the approved contract, and open or update a GitHub issue when it drifts.
+author: DevLatch
+
+inputs:
+  working-directory:
+    description: Directory that contains the .devlatch folder (approved contract and config)
+    default: "."
+  base:
+    description: Base URL of the API to probe, for example https://api.example.com
+    required: true
+  paths:
+    description: Comma-separated GET paths to probe, for example /v1/users,/v1/orders
+    required: true
+  header-env:
+    description: "Comma-separated Header=ENV_VAR pairs. The values are read from environment variables set on the calling step or job and are never saved."
+    default: ""
+  fail-on:
+    description: Report drift at this severity or worse (breaking or warning)
+    default: "breaking"
+  min-samples:
+    description: Responses needed before a field counts as required
+    default: "1"
+  issue:
+    description: Open, update and close a GitHub issue (needs issues write permission)
+    default: "true"
+  issue-title:
+    description: Title of the drift issue
+    default: "DevLatch: API drift detected"
+  issue-label:
+    description: Label used to find the open drift issue
+    default: "devlatch-drift"
+  fail-job-on-drift:
+    description: Also fail the job when drift is found (a tool error always fails it)
+    default: "false"
+
+outputs:
+  exit-code:
+    description: "DevLatch exit code: 0 ok, 1 drift at or above fail-on, 2 tool error"
+    value: ${{ steps.probe.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: ${{ github.action_path }}/../../go.mod
+        cache: false
+
+    - name: Build DevLatch
+      shell: bash
+      run: |
+        cd "${{ github.action_path }}/../.."
+        go build -o "$RUNNER_TEMP/devlatch" ./cmd/devlatch
+
+    - name: Probe the API
+      id: probe
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BASE: ${{ inputs.base }}
+        PATHS: ${{ inputs.paths }}
+        HEADER_ENV: ${{ inputs.header-env }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        MIN_SAMPLES: ${{ inputs.min-samples }}
+      run: |
+        report="$RUNNER_TEMP/devlatch-drift.md"
+        args=(probe --base "$BASE" --paths "$PATHS" --format markdown --fail-on "$FAIL_ON" --min-samples "$MIN_SAMPLES")
+        if [ -n "$HEADER_ENV" ]; then args+=(--header-env "$HEADER_ENV"); fi
+        set +e
+        "$RUNNER_TEMP/devlatch" "${args[@]}" > "$report"
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+        if [ -s "$report" ]; then
+          echo "has-report=true" >> "$GITHUB_OUTPUT"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Open, update or close the drift issue
+      if: inputs.issue == 'true' && steps.probe.outputs.exit-code != '2' && steps.probe.outputs.has-report == 'true'
+      uses: actions/github-script@v8
+      env:
+        CODE: ${{ steps.probe.outputs.exit-code }}
+        REPORT: ${{ steps.probe.outputs.report }}
+        TITLE: ${{ inputs.issue-title }}
+        LABEL: ${{ inputs.issue-label }}
+      with:
+        script: |
+          const fs = require('fs');
+          const code = process.env.CODE;
+          const title = process.env.TITLE;
+          const label = process.env.LABEL;
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const report = fs.readFileSync(process.env.REPORT, 'utf8');
+          const { owner, repo } = context.repo;
+          const open = await github.paginate(github.rest.issues.listForRepo, { owner, repo, state: 'open', labels: label, per_page: 100 });
+          const existing = open.find(i => i.title === title && !i.pull_request);
+          if (code === '1') {
+            const body = `${report}\n\n---\nDetected by the scheduled probe: ${runUrl}`;
+            if (existing) {
+              await github.rest.issues.update({ owner, repo, issue_number: existing.number, body });
+              core.info(`Updated issue #${existing.number}`);
+            } else {
+              const created = await github.rest.issues.create({ owner, repo, title, body, labels: [label] });
+              core.info(`Opened issue #${created.data.number}`);
+            }
+          } else if (code === '0' && existing) {
+            await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body: `Drift resolved: the latest probe matches the approved contract (${runUrl}).` });
+            await github.rest.issues.update({ owner, repo, issue_number: existing.number, state: 'closed' });
+            core.info(`Closed issue #${existing.number}`);
+          }
+
+    - name: Fail the job
+      if: steps.probe.outputs.exit-code == '2' || (steps.probe.outputs.exit-code == '1' && inputs.fail-job-on-drift == 'true')
+      shell: bash
+      env:
+        CODE: ${{ steps.probe.outputs.exit-code }}
+      run: |
+        echo "::error::DevLatch probe exit code $CODE (1 = drift, 2 = tool error). See the report above."
+        exit "$CODE"

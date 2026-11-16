@@ -75,7 +75,7 @@ func runProbe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	minSamples := fs.Int("min-samples", 1, "responses needed before a field counts as required")
 	record := fs.Bool("record", false, "save what was observed as a proposal (then run devlatch approve) instead of checking")
 	failOn := fs.String("fail-on", "breaking", "exit 1 on this severity or worse: breaking or warning")
-	format := fs.String("format", "text", "output format: text or json")
+	format := fs.String("format", "text", "output format: text, json or markdown")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return exitOK
@@ -93,8 +93,8 @@ func runProbe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		_, _ = fmt.Fprintln(stderr, "devlatch probe: --fail-on must be breaking or warning")
 		return exitError
 	}
-	if *format != "text" && *format != "json" {
-		_, _ = fmt.Fprintln(stderr, "devlatch probe: --format must be text or json")
+	if *format != "text" && *format != "json" && *format != "markdown" {
+		_, _ = fmt.Fprintln(stderr, "devlatch probe: --format must be text, json or markdown")
 		return exitError
 	}
 	baseURL, ok := parseTarget(*base)
@@ -213,13 +213,17 @@ func runProbe(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	diff.SortViolations(vs)
 
 	info := stdout
-	if *format == "json" {
+	switch *format {
+	case "json":
 		info = stderr
 		if err := report.JSON(stdout, vs); err != nil {
 			_, _ = fmt.Fprintln(stderr, "devlatch probe:", err)
 			return exitError
 		}
-	} else {
+	case "markdown":
+		info = stderr
+		report.Markdown(stdout, vs)
+	default:
 		report.Text(stdout, vs, os.Getenv("NO_COLOR") == "")
 	}
 	var fresh []string

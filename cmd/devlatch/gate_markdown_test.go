@@ -1,0 +1,68 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"testing"
+
+	"github.com/OWNER/devlatch/internal/report"
+)
+
+// Phase 6 (6a): check --format markdown prints a PR-comment table on stdout only.
+func TestCheckMarkdownReport(t *testing.T) {
+	old, _ := os.Getwd()
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+
+	var mutated atomic.Bool
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if mutated.Load() {
+			_, _ = w.Write([]byte(`{"id":1,"username":"asha","email":"a@x.in","role_id":7,"phone":"99"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":1,"user_name":"asha","email":"a@x.in","role_id":7,"phone":"99"}`))
+	}))
+	defer backend.Close()
+
+	withTraffic := func(args ...string) (int, string, string) {
+		port := freePort(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		var out, errb bytes.Buffer
+		go driveTraffic(port, 8, cancel)
+		full := append(args, "--target", backend.URL, "--port", strconv.Itoa(port), "--min-samples", "5")
+		code := run(ctx, full, &out, &errb)
+		return code, out.String(), errb.String()
+	}
+
+	if code, _, e := withTraffic("record"); code != exitOK {
+		t.Fatalf("record failed (%d): %s", code, e)
+	}
+	var out, errb bytes.Buffer
+	if code := run(context.Background(), []string{"approve"}, &out, &errb); code != exitOK {
+		t.Fatalf("approve failed: %s", errb.String())
+	}
+	mutated.Store(true)
+
+	code, o, e := withTraffic("check", "--format", "markdown")
+	if code != exitDrift {
+		t.Fatalf("renamed backend should exit 1, got %d:\n%s\n%s", code, o, e)
+	}
+	if !strings.HasPrefix(o, report.Marker) {
+		t.Fatalf("stdout must start with the marker (pure markdown):\n%s", o)
+	}
+	for _, want := range []string{"**FAILED**", "| Severity |", "$.user_name -> $.username"} {
+		if !strings.Contains(o, want) {
+			t.Fatalf("missing %q in:\n%s", want, o)
+		}
+	}
+}

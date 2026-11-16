@@ -31,7 +31,7 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	ignore := fs.String("ignore", "", "comma-separated path prefixes to forward but never analyze")
 	from := fs.String("from", "", "replay this traffic JSONL file instead of running the proxy (no backend needed)")
 	failOn := fs.String("fail-on", "breaking", "exit 1 on this severity or worse: breaking or warning")
-	format := fs.String("format", "text", "output format: text or json")
+	format := fs.String("format", "text", "output format: text, json or markdown")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return exitOK
@@ -49,8 +49,8 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		_, _ = fmt.Fprintln(stderr, "devlatch check: --fail-on must be breaking or warning")
 		return exitError
 	}
-	if *format != "text" && *format != "json" {
-		_, _ = fmt.Fprintln(stderr, "devlatch check: --format must be text or json")
+	if *format != "text" && *format != "json" && *format != "markdown" {
+		_, _ = fmt.Fprintln(stderr, "devlatch check: --format must be text, json or markdown")
 		return exitError
 	}
 	base, err := contract.Load(config.ContractPath())
@@ -64,7 +64,7 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	}
 
 	info := stdout
-	if *format == "json" {
+	if *format != "text" {
 		info = stderr // keep stdout pure JSON
 	}
 
@@ -109,6 +109,8 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 			_, _ = fmt.Fprintln(stderr, "devlatch check:", err)
 			return exitError
 		}
+	} else if *format == "markdown" {
+		report.Markdown(stdout, vs)
 	} else {
 		_, _ = fmt.Fprintln(stdout)
 		report.Text(stdout, vs, os.Getenv("NO_COLOR") == "")

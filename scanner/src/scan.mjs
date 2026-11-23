@@ -15,15 +15,40 @@ function parseEndpoint(ep) {
   return { method, re };
 }
 
-function urlText(n) {
-  if (!n) return null;
+function urlText(n, depth = 0) {
+  if (!n || depth > 4) return null;
   if (Node.isStringLiteral(n) || Node.isNoSubstitutionTemplateLiteral(n)) return n.getLiteralText();
   if (Node.isTemplateExpression(n)) {
     return n.getHead().getLiteralText() + n.getTemplateSpans().map((s) => "X" + s.getLiteral().getLiteralText()).join("");
   }
   if (Node.isBinaryExpression(n) && n.getOperatorToken().getKind() === SyntaxKind.PlusToken) {
-    return (urlText(n.getLeft()) ?? "X") + (urlText(n.getRight()) ?? "X");
+    return (urlText(n.getLeft(), depth + 1) ?? "X") + (urlText(n.getRight(), depth + 1) ?? "X");
   }
+  return resolveUrl(n, depth);
+}
+
+// Follow a URL through const variables, object members and tiny helper functions.
+function resolveUrl(n, depth) {
+  try {
+    if (Node.isParenthesizedExpression(n) || Node.isAsExpression(n) || Node.isNonNullExpression(n)) return urlText(n.getExpression(), depth + 1);
+    if (Node.isIdentifier(n) || Node.isPropertyAccessExpression(n)) {
+      for (const d of n.getSymbol()?.getDeclarations() ?? []) {
+        if ((Node.isVariableDeclaration(d) || Node.isPropertyAssignment(d)) && d.getInitializer()) {
+          const t = urlText(d.getInitializer(), depth + 1);
+          if (t != null) return t;
+        }
+      }
+      return null;
+    }
+    if (Node.isCallExpression(n)) {
+      const fn = resolveFn(n.getExpression());
+      const body = fn && fn.getBody ? fn.getBody() : null;
+      if (!body) return null;
+      if (!Node.isBlock(body)) return urlText(body, depth + 1);
+      const ret = body.getDescendantsOfKind(SyntaxKind.ReturnStatement)[0];
+      return ret ? urlText(ret.getExpression(), depth + 1) : null;
+    }
+  } catch {}
   return null;
 }
 
@@ -41,19 +66,22 @@ function bindingNames(nameNode) {
 
 function wrapperCalls(fn) {
   let nameNode = null;
-  if (Node.isFunctionDeclaration(fn)) nameNode = fn.getNameNode();
+  if (Node.isFunctionDeclaration(fn) || Node.isMethodDeclaration(fn)) nameNode = fn.getNameNode();
   else {
     const p = fn.getParent();
-    if (p && Node.isVariableDeclaration(p)) nameNode = p.getNameNode();
+    if (p && (Node.isVariableDeclaration(p) || Node.isPropertyAssignment(p))) nameNode = p.getNameNode();
   }
   if (!nameNode || !Node.isIdentifier(nameNode)) return [];
-  return nameNode
-    .findReferencesAsNodes()
-    .filter((r) => {
-      const p = r.getParent();
-      return p && Node.isCallExpression(p) && p.getExpression() === r;
-    })
-    .map((r) => r.getParent());
+  const calls = [];
+  for (const r of nameNode.findReferencesAsNodes()) {
+    const p = r.getParent();
+    if (p && Node.isCallExpression(p) && p.getExpression() === r) calls.push(p);
+    else if (p && Node.isPropertyAccessExpression(p) && p.getNameNode() === r) {
+      const g = p.getParent();
+      if (g && Node.isCallExpression(g) && g.getExpression() === p) calls.push(g);
+    }
+  }
+  return calls;
 }
 
 function findEndpointCalls(files, ep) {
@@ -76,9 +104,12 @@ function findEndpointCalls(files, ep) {
 
 function taintFor(call) {
   const scope = call.getFirstAncestor(isFn) ?? call.getSourceFile();
-  const names = new Set();
-  const vars = [];
   const inCall = (n) => n.getSourceFile() === call.getSourceFile() && n.getPos() <= call.getPos() && call.getEnd() <= n.getEnd();
+  return taintFlow(scope, new Set(), inCall);
+}
+
+function taintFlow(scope, names, inCall) {
+  const vars = [];
   const hasTainted = (n) =>
     Node.isIdentifier(n) ? names.has(n.getText()) : n.getDescendantsOfKind(SyntaxKind.Identifier).some((i) => names.has(i.getText()));
   for (let pass = 0; pass < 3; pass++) {
@@ -88,6 +119,12 @@ function taintFor(call) {
         if (init && (inCall(init) || hasTainted(init))) {
           bindingNames(n.getNameNode()).forEach((x) => names.add(x));
           if (!vars.includes(n)) vars.push(n);
+        }
+      } else if (Node.isForOfStatement(n)) {
+        const e = n.getExpression();
+        if (inCall(e) || hasTainted(e)) {
+          const init = n.getInitializer();
+          if (Node.isVariableDeclarationList(init)) init.getDeclarations().forEach((d) => bindingNames(d.getNameNode()).forEach((x) => names.add(x)));
         }
       } else if (Node.isCallExpression(n)) {
         const ex = n.getExpression();
@@ -105,6 +142,44 @@ function taintFor(call) {
     });
   }
   return { scope, names, vars };
+}
+
+function resolveFn(expr) {
+  try {
+    for (const d of expr.getSymbol()?.getDeclarations() ?? []) {
+      if (isFn(d)) return d;
+      if (Node.isVariableDeclaration(d) || Node.isPropertyAssignment(d)) {
+        const i = d.getInitializer();
+        if (i && isFn(i)) return i;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+// When a tainted value is passed to a project function, taint that function's parameter (up to maxHops deep).
+function propagateArgs(taints, isProject, maxHops = 3) {
+  const seen = new Set();
+  for (let i = 0; i < taints.length && taints.length < 300; i++) {
+    const t = taints[i];
+    const hop = t.hop ?? 0;
+    if (hop >= maxHops) continue;
+    const hasTainted = (n) =>
+      Node.isIdentifier(n) ? t.names.has(n.getText()) : n.getDescendantsOfKind(SyntaxKind.Identifier).some((x) => t.names.has(x.getText()));
+    for (const call of t.scope.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+      const fn = resolveFn(call.getExpression());
+      if (!fn || !isProject(fn.getSourceFile())) continue;
+      call.getArguments().forEach((arg, idx) => {
+        if (!hasTainted(arg)) return;
+        const p = fn.getParameters()[idx];
+        if (!p) return;
+        const key = `${fn.getSourceFile().getFilePath()}:${fn.getPos()}:${idx}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        taints.push({ ...taintFlow(fn, new Set(bindingNames(p.getNameNode())), () => false), hop: hop + 1 });
+      });
+    }
+  }
 }
 
 function collectLinked(types, isProject, out) {
@@ -175,6 +250,7 @@ function scanOne(files, isProject, drift, cwd) {
   });
   const linked = new Set();
   collectLinked(types, isProject, linked);
+  propagateArgs(taints, isProject);
 
   const isTainted = (node) => {
     let expr = null;

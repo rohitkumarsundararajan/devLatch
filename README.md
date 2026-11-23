@@ -52,7 +52,7 @@ devlatch impact -frontend path/to/frontend -endpoint "GET /api/v1/users/{id}" -p
 devlatch check -format json | devlatch impact -frontend path/to/frontend -from-check -
 ~~~
 
-Limitations: docs/impact-limitations.md. Rename detection: docs/rename-detection.md.
+Accuracy: docs/impact-accuracy.md. Limitations: docs/impact-limitations.md. Rename detection: docs/rename-detection.md.
 
 ## CI
 

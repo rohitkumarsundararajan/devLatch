@@ -1,10 +1,10 @@
 // Precision / recall benchmark for the impact scanner.
 // Ground truth: lines in fixtures/bench/src/*.ts ending with "// @hit <caseId>".
-// usage: node test/bench.mjs [--fixture DIR] [--json] [--verbose] [--min-recall 0.9] [--min-precision 0.8]
+// usage: node test/bench.mjs [--fixture DIR] [--scanner FILE] [--json] [--verbose] [--min-recall 0.9] [--min-precision 0.8]
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { scan } from "../src/scan.mjs";
+import { pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -29,11 +29,14 @@ for (const f of fs.readdirSync(srcDir).filter((n) => /\.tsx?$/.test(n))) {
     .split(/\r?\n/)
     .forEach((line, i) => {
       lineText.set(`src/${f}:${i + 1}`, line.trim());
-      const m = line.match(/\/\/\s*@hit\s+(\w+)/);
-      if (m && expected.has(m[1])) expected.get(m[1]).set(`src/${f}:${i + 1}`, line.trim());
+      for (const m of line.matchAll(/\/\/\s*@hit\s+(\w+)/g)) {
+        if (expected.has(m[1])) expected.get(m[1]).set(`src/${f}:${i + 1}`, line.trim());
+      }
     });
 }
 
+const scannerPath = path.resolve(opt("--scanner", path.join(here, "..", "src", "scan.mjs")));
+const { scan } = await import(pathToFileURL(scannerPath).href);
 const results = scan({
   tsconfig: path.join(fixture, "tsconfig.json"),
   cwd: fixture,

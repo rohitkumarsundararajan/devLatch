@@ -1,7 +1,7 @@
 import type { User } from "../types/user";
 
 export default function Profile({ user }: { user: User }) {
-  const { user_name, email, role_id, nickname, permissions, phone } = user;
+  const { username: user_name, email, role_id, nickname, permissions, phone } = user;
   return (
     <section>
       <h2>{user_name}</h2>

@@ -4,7 +4,7 @@ export default function Header({ user }: { user: User | null }) {
   return (
     <header>
       <strong>Demo Shop</strong>
-      {user && <span> | signed in as {user.user_name}</span>}
+      {user && <span> | signed in as {user.username}</span>}
     </header>
   );
 }

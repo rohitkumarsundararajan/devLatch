@@ -25,8 +25,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/OWNER/devlatch/internal/infer"
-	"github.com/OWNER/devlatch/internal/normalize"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/normalize"
 )
 
 // Options configures a Proxy. Zero values take the documented defaults.

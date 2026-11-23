@@ -3,7 +3,7 @@ package diff
 import (
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 func TestMissingEndpoints(t *testing.T) {

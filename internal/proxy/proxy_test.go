@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 // rawClient never decompresses, so tests see exactly the bytes on the wire.

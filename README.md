@@ -50,4 +50,4 @@ make build    # bin/devlatch
 ```
 
 Requires Go 1.22+ and Node 20+ (Node only for the demo frontend and, later, the impact scanner).
-Before publishing, replace the placeholder module path `github.com/OWNER/devlatch` (see `go.mod`).
+Before publishing, replace the placeholder module path `github.com/rohitkumarsundararajan/devlatch` (see `go.mod`).

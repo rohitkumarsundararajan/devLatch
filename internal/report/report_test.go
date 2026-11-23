@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
 )
 
 var sample = []diff.Violation{

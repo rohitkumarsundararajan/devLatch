@@ -9,12 +9,12 @@ import (
 	"os"
 	"sort"
 
-	"github.com/OWNER/devlatch/internal/config"
-	"github.com/OWNER/devlatch/internal/contract"
-	"github.com/OWNER/devlatch/internal/diff"
-	"github.com/OWNER/devlatch/internal/infer"
-	"github.com/OWNER/devlatch/internal/ingest"
-	"github.com/OWNER/devlatch/internal/report"
+	"github.com/rohitkumarsundararajan/devlatch/internal/config"
+	"github.com/rohitkumarsundararajan/devlatch/internal/contract"
+	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/ingest"
+	"github.com/rohitkumarsundararajan/devlatch/internal/report"
 )
 
 // runCheck compares live traffic (or a replayed traffic file) with the

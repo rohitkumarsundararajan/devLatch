@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/infer"
-	"github.com/OWNER/devlatch/internal/ingest"
-	"github.com/OWNER/devlatch/internal/proxy"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/ingest"
+	"github.com/rohitkumarsundararajan/devlatch/internal/proxy"
 )
 
 type collectOpts struct {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 func TestCollapseEndpointsMergesSchemas(t *testing.T) {

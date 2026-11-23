@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/config"
-	"github.com/OWNER/devlatch/internal/contract"
-	"github.com/OWNER/devlatch/internal/ingest"
-	"github.com/OWNER/devlatch/internal/version"
+	"github.com/rohitkumarsundararajan/devlatch/internal/config"
+	"github.com/rohitkumarsundararajan/devlatch/internal/contract"
+	"github.com/rohitkumarsundararajan/devlatch/internal/ingest"
+	"github.com/rohitkumarsundararajan/devlatch/internal/version"
 )
 
 // runRecord learns a contract proposal from live traffic and saves it to

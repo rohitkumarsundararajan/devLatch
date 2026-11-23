@@ -7,9 +7,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/OWNER/devlatch/internal/contract"
-	"github.com/OWNER/devlatch/internal/diff"
-	"github.com/OWNER/devlatch/internal/report"
+	"github.com/rohitkumarsundararajan/devlatch/internal/contract"
+	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/report"
 )
 
 // runDiff compares two contract files: devlatch diff [flags] OLD NEW.

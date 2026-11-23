@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
 )
 
 func TestMarkdown(t *testing.T) {

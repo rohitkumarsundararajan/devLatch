@@ -1,0 +1,4 @@
+[
+  { "id": "u1", "endpoint": "GET /api/users/{id} 200", "path": "$.user_name" },
+  { "id": "o1", "endpoint": "GET /api/orders 200", "path": "$.orders[].total_amount" }
+]

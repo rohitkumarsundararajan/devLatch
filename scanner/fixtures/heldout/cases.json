@@ -1,0 +1,4 @@
+[
+  { "id": "s1", "endpoint": "GET /api/stats 200", "path": "$.visit_count" },
+  { "id": "p1", "endpoint": "GET /api/profile 200", "path": "$.avatar_url" }
+]

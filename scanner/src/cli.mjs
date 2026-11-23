@@ -37,9 +37,8 @@ try {
       for (const c of res.changes) console.log(`  ${c.file}:${c.line}  (${c.confidence})\n    - ${c.before}\n    + ${c.after}`);
       if (res.diagnostics) console.log(`TypeScript errors: ${res.diagnostics.before} before, ${res.diagnostics.after} after`);
     }
-    process.exit(res.reverted ? 3 : 0);
-  }
-  if (args.includes("--json")) console.log(JSON.stringify({ results }, null, 2));
+    process.exitCode = res.reverted ? 3 : 0;
+  } else if (args.includes("--json")) console.log(JSON.stringify({ results }, null, 2));
   else
     for (const r of results) {
       console.log(`${r.path}  (${r.endpoint})  affects ${new Set(r.hits.map((h) => h.file)).size} files, endpoint calls found: ${r.endpointCalls}`);

@@ -45,6 +45,8 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return runProbe(ctx, args[1:], stdout, stderr)
 	case "diff":
 		return runDiff(args[1:], stdout, stderr)
+	case "fix":
+		return runFix(args[1:], stdout, stderr)
 	case "impact":
 		return runImpact(args[1:], stdout, stderr)
 	case "check":
@@ -75,6 +77,7 @@ Commands:
   check     compare live traffic with the contract (exit 1 on breaking drift)
   diff      compare two contract files (devlatch diff OLD NEW)
   impact    list frontend files that read a drifted field
+  fix       rename drifted fields in frontend code (preview, --apply, --pr)
   probe     GET an API directly (no proxy) to record or check its contract
   watch     run a proxy and print the shapes it learns (no files written)
   version   print the version

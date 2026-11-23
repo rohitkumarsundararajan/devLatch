@@ -220,6 +220,44 @@ function propDecls(node, key) {
   return [];
 }
 
+// Exact text edit that renames the field at this node (null when the node has no editable name).
+function editFor(node, kind, to) {
+  const inner = (n) => (Node.isStringLiteral(n) ? { start: n.getStart() + 1, end: n.getEnd() - 1, text: to } : { start: n.getStart(), end: n.getEnd(), text: to });
+  let e = null;
+  if (Node.isPropertyAccessExpression(node)) e = inner(node.getNameNode());
+  else if (Node.isElementAccessExpression(node)) {
+    const a = node.getArgumentExpression();
+    if (a && Node.isStringLiteral(a)) e = inner(a);
+  } else if (Node.isBindingElement(node)) {
+    const pn = node.getPropertyNameNode();
+    if (pn) e = inner(pn);
+    else e = { start: node.getNameNode().getStart(), end: node.getNameNode().getStart(), text: to + ": " };
+  } else if (Node.isPropertySignature(node) || Node.isPropertyAssignment(node)) e = inner(node.getNameNode());
+  if (!e) return null;
+  return { ...e, old: node.getSourceFile().getFullText().slice(e.start, e.end) };
+}
+
+// Pick<User, "field"> / Omit<User, "field">: string-literal keys that name the field on a linked type.
+function typeKeyEdits(files, key, to, linked, edits, cwd) {
+  for (const sf of files) {
+    for (const lit of sf.getDescendantsOfKind(SyntaxKind.StringLiteral)) {
+      if (lit.getLiteralText() !== key || !lit.getParent() || !Node.isLiteralTypeNode(lit.getParent())) continue;
+      const ref = lit.getFirstAncestorByKind(SyntaxKind.TypeReference);
+      if (!ref || !["Pick", "Omit"].includes(ref.getTypeName().getText())) continue;
+      const base = ref.getTypeArguments()[0];
+      let ok = false;
+      try {
+        ok = (base?.getType().getProperty(key)?.getDeclarations() ?? []).some((d) => linked.has(d));
+      } catch {}
+      if (!ok) continue;
+      const start = lit.getStart() + 1;
+      const end = lit.getEnd() - 1;
+      const file = path.relative(cwd, sf.getFilePath()).split(path.sep).join("/");
+      edits.set(sf.getFilePath() + ":" + start, { abs: sf.getFilePath(), file, line: lit.getStartLineNumber(), confidence: "type-linked", start, end, text: to, old: key });
+    }
+  }
+}
+
 function scanOne(files, isProject, drift, cwd) {
   const segs = drift.path.replace(/^\$\.?/, "").split(".").map((s) => s.replace(/\[\]$/, "")).filter(Boolean);
   const key = segs[segs.length - 1];
@@ -268,6 +306,7 @@ function scanOne(files, isProject, drift, cwd) {
 
   // 3. find every place the key appears and classify it
   const hits = new Map();
+  const edits = new Map();
   for (const sf of files) {
     sf.forEachDescendant((node) => {
       let kind = null;
@@ -290,6 +329,10 @@ function scanOne(files, isProject, drift, cwd) {
       else if (isTainted(node)) confidence = "flow-linked";
       const line = node.getStartLineNumber();
       const file = path.relative(cwd, sf.getFilePath()).split(path.sep).join("/");
+      if (drift.to) {
+        const ed = editFor(node, kind, drift.to);
+        if (ed) edits.set(sf.getFilePath() + ":" + ed.start, { abs: sf.getFilePath(), file, line, confidence, ...ed });
+      }
       const id = `${file}:${line}:${kind}`;
       const prev = hits.get(id);
       if (prev && RANK[prev.confidence] <= RANK[confidence]) return;
@@ -300,7 +343,8 @@ function scanOne(files, isProject, drift, cwd) {
   const sorted = [...hits.values()].sort(
     (a, b) => RANK[a.confidence] - RANK[b.confidence] || a.file.localeCompare(b.file) || a.line - b.line
   );
-  return { endpointCalls, hits: sorted };
+  if (drift.to) typeKeyEdits(files, key, drift.to, linked, edits, cwd);
+  return { endpointCalls, hits: sorted, edits: [...edits.values()] };
 }
 
 export function scan({ tsconfig, drifts, cwd = process.cwd() }) {

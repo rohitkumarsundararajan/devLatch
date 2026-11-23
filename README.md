@@ -54,8 +54,17 @@ devlatch check -format json | devlatch impact -frontend path/to/frontend -from-c
 
 Accuracy: docs/impact-accuracy.md. Limitations: docs/impact-limitations.md. Rename detection: docs/rename-detection.md.
 
-## CI
+## Fix the frontend after a rename (fix)
 
+~~~
+devlatch check -format json > check.json
+devlatch fix -frontend path/to/frontend -from-check check.json          # preview
+devlatch fix -frontend path/to/frontend -from-check check.json -apply   # write
+devlatch fix -frontend path/to/frontend -from-check check.json -pr      # branch + commit + PR (needs git and gh)
+~~~
+
+It rewrites reads, destructuring and type declarations of the renamed field, then re-runs the TypeScript check and restores everything if errors increased. Details: docs/auto-fix.md.
+## CI
 - Pull requests: .github/workflows/devlatch-pr.yml (uses the composite action in action/) runs devlatch check and posts a sticky comment. A breaking drift fails the check.
 - Scheduled watch: .github/workflows/api-drift-watch.yml probes an API every 6 hours and opens, updates or closes a devlatch-drift issue.
 
@@ -68,6 +77,7 @@ approve   accept the recorded proposal as the contract
 check     compare live traffic with the contract (exit 1 on breaking drift)
 diff      compare two contract files (devlatch diff OLD NEW)
 impact    list frontend files that read a drifted field
+fix       rename drifted fields in frontend code (preview, --apply, --pr)
 probe     GET an API directly (no proxy) to record or check its contract
 watch     run a proxy and print the shapes it learns (no files written)
 version   print the version

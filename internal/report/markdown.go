@@ -27,7 +27,7 @@ func mdDetail(v diff.Violation) string {
 		parts = append(parts, "got "+strings.Join(v.Actual, "|"))
 	}
 	if v.RenameFrom != "" {
-		parts = append(parts, fmt.Sprintf("%s -> %s, confidence %.2f", v.RenameFrom, v.RenameTo, v.Confidence))
+		parts = append(parts, fmt.Sprintf("`%s` -> `%s`, confidence %.2f", v.RenameFrom, v.RenameTo, v.Confidence))
 	}
 	if len(v.Evidence) > 0 {
 		parts = append(parts, "evidence: "+strings.Join(v.Evidence, "; "))

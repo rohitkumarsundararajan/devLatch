@@ -27,7 +27,7 @@ func TestMarkdown(t *testing.T) {
 	var out bytes.Buffer
 	Markdown(&out, vs)
 	got := out.String()
-	for _, want := range []string{Marker, "**FAILED**", "1 breaking", "user_name -> username", "a\\|b", "| Severity |"} {
+	for _, want := range []string{Marker, "**FAILED**", "1 breaking", "`user_name` -> `username`", "a\\|b", "| Severity |"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in:\n%s", want, got)
 		}

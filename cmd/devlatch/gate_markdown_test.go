@@ -60,7 +60,7 @@ func TestCheckMarkdownReport(t *testing.T) {
 	if !strings.HasPrefix(o, report.Marker) {
 		t.Fatalf("stdout must start with the marker (pure markdown):\n%s", o)
 	}
-	for _, want := range []string{"**FAILED**", "| Severity |", "$.user_name -> $.username"} {
+	for _, want := range []string{"**FAILED**", "| Severity |", "`$.user_name` -> `$.username`"} {
 		if !strings.Contains(o, want) {
 			t.Fatalf("missing %q in:\n%s", want, o)
 		}

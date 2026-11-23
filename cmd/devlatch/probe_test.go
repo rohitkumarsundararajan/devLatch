@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/config"
+	"github.com/rohitkumarsundararajan/devlatch/internal/config"
 )
 
 func TestProbeFlow(t *testing.T) {

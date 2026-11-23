@@ -3,7 +3,7 @@ package diff
 import (
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 // learn merges n copies of one payload into a Node, like the proxy store does.

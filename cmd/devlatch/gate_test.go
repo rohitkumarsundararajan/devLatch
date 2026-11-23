@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/report"
+	"github.com/rohitkumarsundararajan/devlatch/internal/report"
 )
 
 func freePort(t *testing.T) int {

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/OWNER/devlatch/internal/config"
+	"github.com/rohitkumarsundararajan/devlatch/internal/config"
 )
 
 func parseTarget(s string) (*url.URL, bool) {

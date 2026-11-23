@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/OWNER/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
 )
 
 // Marker is a hidden HTML comment at the top of the report. CI uses it to

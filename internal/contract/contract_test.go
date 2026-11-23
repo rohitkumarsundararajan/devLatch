@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/diff"
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 func leaf(n int, k string) *infer.Node {

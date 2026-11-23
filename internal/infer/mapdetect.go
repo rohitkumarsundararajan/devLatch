@@ -3,7 +3,7 @@ package infer
 import (
 	"strings"
 
-	"github.com/OWNER/devlatch/internal/normalize"
+	"github.com/rohitkumarsundararajan/devlatch/internal/normalize"
 )
 
 // maybeMap converts n from OBJECT to MAP when its keys look dynamic. It runs

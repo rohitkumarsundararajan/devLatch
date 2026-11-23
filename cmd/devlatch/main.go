@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/OWNER/devlatch/internal/version"
+	"github.com/rohitkumarsundararajan/devlatch/internal/version"
 )
 
 // Exit codes: 0 ok, 1 drift found (check), 2 tool or usage error.

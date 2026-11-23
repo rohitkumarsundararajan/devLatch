@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/report"
+	"github.com/rohitkumarsundararajan/devlatch/internal/report"
 )
 
 // Phase 5 gate: a renamed key is reported as one POSSIBLE_RENAME with evidence.

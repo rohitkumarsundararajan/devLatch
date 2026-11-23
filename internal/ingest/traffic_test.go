@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/infer"
-	"github.com/OWNER/devlatch/internal/normalize"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/normalize"
 )
 
 var entries = []Entry{

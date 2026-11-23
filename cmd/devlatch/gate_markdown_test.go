@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/report"
+	"github.com/rohitkumarsundararajan/devlatch/internal/report"
 )
 
 // Phase 6 (6a): check --format markdown prints a PR-comment table on stdout only.

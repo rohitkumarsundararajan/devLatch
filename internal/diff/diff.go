@@ -3,8 +3,8 @@ package diff
 import (
 	"sort"
 
-	"github.com/OWNER/devlatch/internal/infer"
-	"github.com/OWNER/devlatch/internal/rename"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/rename"
 )
 
 const (

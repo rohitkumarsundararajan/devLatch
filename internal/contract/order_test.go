@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 func TestContractKeepsKeyOrder(t *testing.T) {

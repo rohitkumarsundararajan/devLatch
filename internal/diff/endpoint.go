@@ -1,6 +1,6 @@
 package diff
 
-import "github.com/OWNER/devlatch/internal/infer"
+import "github.com/rohitkumarsundararajan/devlatch/internal/infer"
 
 // EndpointMissing is reported by probe when a contract endpoint was not
 // observed (status code or content type changed, or the request failed).

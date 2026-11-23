@@ -1,53 +1,80 @@
 # DevLatch
 
-**Zero-config API contract guard.** DevLatch learns your API's real response shapes from live traffic,
-catches drift before it ships, tells you **which frontend files will break**, and generates the fix.
+Zero-config API contract guard. DevLatch watches real traffic between your frontend and backend, learns the response shapes, and fails your build when the API drifts (a field renamed, removed, or its type changed) before the frontend breaks.
 
-> Status: **Phase 0** (skeleton). Nothing user-facing works yet. The full plan is in
-> [`devlatch_idea.md`](devlatch_idea.md); build progress is tracked in its checklist (section 23).
+- Learns a contract from live traffic through a local proxy, or by probing a public API directly
+- Detects removed fields, type changes, and likely renames (POSSIBLE_RENAME with a confidence score and evidence)
+- Lists the frontend files that read a drifted field (TypeScript)
+- Exit codes for CI: 0 ok, 1 breaking drift, 2 error
+- GitHub Action that comments on PRs, plus a scheduled watch that opens an issue on drift
 
-## Try the Phase 0 demo
+## Install
 
-Two terminals:
+Download a binary for your OS from the GitHub Releases page (devlatch_VERSION_OS_ARCH), or build from source (Go 1.22+):
 
-```bash
-# 1. demo backend on http://127.0.0.1:8000
-make demo-backend
+~~~
+go build -o devlatch ./cmd/devlatch
+devlatch version
+~~~
 
-# 2. demo frontend on http://localhost:5173 (proxies /api to :8000)
-make demo-frontend-install   # first time only
-make demo-frontend
-```
+## Quickstart (about 5 minutes, no backend needed)
 
-Break the API on demand (these are the drift cases DevLatch must catch):
+Probe a public API, save its contract, then check it:
 
-```bash
-curl -X POST   localhost:8000/__demo/mutations/rename_user_name   # user_name -> username
-curl -X POST   localhost:8000/__demo/mutations/balance_to_string  # balance 104.5 -> "104.50"
-curl -X DELETE localhost:8000/__demo/mutations/balance_to_string  # undo one
-curl -X POST   localhost:8000/__demo/reset                        # undo all
-curl           localhost:8000/__demo/mutations                    # list available + active
-```
+~~~
+devlatch init -target https://jsonplaceholder.typicode.com
+devlatch probe -base https://jsonplaceholder.typicode.com -paths /posts/1,/users/1 -record
+devlatch approve
+devlatch probe -base https://jsonplaceholder.typicode.com -paths /posts/1,/users/1
+~~~
 
-| Mutation | Drift it simulates | Expected DevLatch result |
-|---|---|---|
-| `rename_user_name` | field rename | BREAKING (possible rename) |
-| `balance_to_string` | NUMBER -> STRING | BREAKING |
-| `tags_to_objects` | array of strings -> array of objects | BREAKING |
-| `remove_email` | required key removed | BREAKING |
-| `nullable_nickname` | field becomes nullable | WARNING |
-| `add_currency` | new key | SAFE |
-| `new_map_date` | date-keyed map gains a date | no violation (MAP) |
+The last command prints OK and exits 0. If a field in the API is renamed or removed, it exits 1 and says what changed.
 
-You can also start the backend pre-broken: `go run ./examples/demo-backend -mutate rename_user_name`.
+## Using it with your own backend
 
-## Development
+~~~
+devlatch init -target http://localhost:8000
+devlatch record -duration 2m      # proxy on 127.0.0.1:9000: send your frontend or tests through it
+devlatch approve                  # accept the recorded proposal as the contract
+devlatch check -duration 30s      # later: exit 1 on breaking drift
+~~~
 
-```bash
-make help     # all targets
-make check    # gofmt + vet + tests with the race detector (what CI runs)
-make build    # bin/devlatch
-```
+Replay without a running backend: run record with -save-traffic traffic.jsonl, then devlatch check -from traffic.jsonl.
 
-Requires Go 1.22+ and Node 20+ (Node only for the demo frontend and, later, the impact scanner).
-Before publishing, replace the placeholder module path `github.com/OWNER/devlatch` (see `go.mod`).
+Useful flags: -format text|json|markdown, -fail-on breaking|warning, -renames=false (report REMOVED_KEY + ADDED_KEY instead of POSSIBLE_RENAME), -ignore /health,/metrics.
+
+## Which frontend files break? (impact)
+
+Needs Node.js and the scanner/ folder from this repo (run npm install inside scanner/ once):
+
+~~~
+devlatch impact -frontend path/to/frontend -endpoint "GET /api/v1/users/{id}" -path '$.user_name'
+devlatch check -format json | devlatch impact -frontend path/to/frontend -from-check -
+~~~
+
+Limitations: docs/impact-limitations.md. Rename detection: docs/rename-detection.md.
+
+## CI
+
+- Pull requests: .github/workflows/devlatch-pr.yml (uses the composite action in action/) runs devlatch check and posts a sticky comment. A breaking drift fails the check.
+- Scheduled watch: .github/workflows/api-drift-watch.yml probes an API every 6 hours and opens, updates or closes a devlatch-drift issue.
+
+## Commands
+
+~~~
+init      create .devlatch/config.json for a backend
+record    learn a contract proposal from live traffic
+approve   accept the recorded proposal as the contract
+check     compare live traffic with the contract (exit 1 on breaking drift)
+diff      compare two contract files (devlatch diff OLD NEW)
+impact    list frontend files that read a drifted field
+probe     GET an API directly (no proxy) to record or check its contract
+watch     run a proxy and print the shapes it learns (no files written)
+version   print the version
+~~~
+
+Run "devlatch COMMAND -h" for flags.
+
+## License
+
+MIT

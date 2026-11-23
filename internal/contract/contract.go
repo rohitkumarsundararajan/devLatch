@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 const SchemaVersion = "1.0.0"

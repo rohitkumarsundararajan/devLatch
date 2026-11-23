@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/infer"
-	"github.com/OWNER/devlatch/internal/proxy"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/proxy"
 )
 
 // runWatch starts the proxy and runs until ctx is cancelled (Ctrl+C), then

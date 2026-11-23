@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OWNER/devlatch/internal/config"
-	"github.com/OWNER/devlatch/internal/contract"
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/config"
+	"github.com/rohitkumarsundararajan/devlatch/internal/contract"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 func TestConfigRulesApply(t *testing.T) {

@@ -5,3 +5,6 @@ dist/
 .DS_Store
 
 scanner/node_modules/
+
+*.exe
+dist/

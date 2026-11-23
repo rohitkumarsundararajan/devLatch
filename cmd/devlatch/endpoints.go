@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/OWNER/devlatch/internal/config"
-	"github.com/OWNER/devlatch/internal/infer"
-	"github.com/OWNER/devlatch/internal/normalize"
+	"github.com/rohitkumarsundararajan/devlatch/internal/config"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/normalize"
 )
 
 // pathParamMin is how many distinct digit-containing values at one path

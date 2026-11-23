@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/OWNER/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
 )
 
 func redactSet(names []string) map[string]bool {

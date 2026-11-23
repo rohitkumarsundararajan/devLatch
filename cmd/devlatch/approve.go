@@ -9,10 +9,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/OWNER/devlatch/internal/config"
-	"github.com/OWNER/devlatch/internal/contract"
-	"github.com/OWNER/devlatch/internal/diff"
-	"github.com/OWNER/devlatch/internal/report"
+	"github.com/rohitkumarsundararajan/devlatch/internal/config"
+	"github.com/rohitkumarsundararajan/devlatch/internal/contract"
+	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/report"
 )
 
 // runApprove promotes the recorded proposal to the enforced contract.

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/OWNER/devlatch/internal/impact"
+	"github.com/rohitkumarsundararajan/devlatch/internal/impact"
 )
 
 // runImpact maps drifted fields to the frontend files that read them.

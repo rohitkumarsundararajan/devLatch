@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DriftItem, State, Violation, getState } from "./api";
+import Contract from "./Contract";
 
 const MAX_FEED = 200;
 
@@ -18,6 +19,7 @@ export default function App() {
   const [state, setState] = useState<State | null>(null);
   const [live, setLive] = useState(false);
   const [feed, setFeed] = useState<DriftItem[]>([]);
+  const [tab, setTab] = useState<"live" | "contract">("live");
 
   useEffect(() => {
     let stop = false;
@@ -46,50 +48,64 @@ export default function App() {
     };
   }, []);
 
+  const drifted = useMemo(() => new Set(feed.map((d) => `${d.v.endpoint}|${d.v.path}`)), [feed]);
+
   return (
     <div className="app">
       <header>
         <h1>DevLatch</h1>
         <span className={live ? "pill ok" : "pill off"}>{live ? "live" : "disconnected"}</span>
         {state && <span className="muted">v{state.version}</span>}
+        <nav className="tabs">
+          <button className={tab === "live" ? "on" : ""} onClick={() => setTab("live")}>
+            Live
+          </button>
+          <button className={tab === "contract" ? "on" : ""} onClick={() => setTab("contract")}>
+            Contract
+          </button>
+        </nav>
       </header>
 
-      <main>
-        <section>
-          <h2>Endpoints ({state?.endpoints.length ?? 0})</h2>
-          {state && state.endpoints.length === 0 && (
-            <p className="muted">No traffic yet. Point your app at the DevLatch proxy.</p>
-          )}
-          <ul className="list">
-            {state?.endpoints.map((e) => (
-              <li key={e.key}>
-                <code>{e.key}</code>
-                <span className="muted">{e.responses} responses</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {tab === "contract" ? (
+        <Contract drifted={drifted} />
+      ) : (
+        <main>
+          <section>
+            <h2>Endpoints ({state?.endpoints.length ?? 0})</h2>
+            {state && state.endpoints.length === 0 && (
+              <p className="muted">No traffic yet. Point your app at the DevLatch proxy.</p>
+            )}
+            <ul className="list">
+              {state?.endpoints.map((e) => (
+                <li key={e.key}>
+                  <code>{e.key}</code>
+                  <span className="muted">{e.responses} responses</span>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        <section>
-          <h2>Drift feed ({feed.length})</h2>
-          {feed.length === 0 && <p className="muted">No drift detected.</p>}
-          <ul className="list">
-            {feed.map((d) => (
-              <li key={d.id}>
-                <span className={`sev ${d.v.severity}`}>{d.v.severity}</span>
-                <div>
+          <section>
+            <h2>Drift feed ({feed.length})</h2>
+            {feed.length === 0 && <p className="muted">No drift detected.</p>}
+            <ul className="list">
+              {feed.map((d) => (
+                <li key={d.id}>
+                  <span className={`sev ${d.v.severity}`}>{d.v.severity}</span>
                   <div>
-                    <strong>{d.v.type}</strong> <code>{d.v.path}</code>
+                    <div>
+                      <strong>{d.v.type}</strong> <code>{d.v.path}</code>
+                    </div>
+                    <div className="muted">
+                      <code>{d.v.endpoint}</code> {describe(d.v)}
+                    </div>
                   </div>
-                  <div className="muted">
-                    <code>{d.v.endpoint}</code> {describe(d.v)}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </main>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </main>
+      )}
     </div>
   );
 }

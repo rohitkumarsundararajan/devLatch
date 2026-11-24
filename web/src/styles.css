@@ -27,3 +27,11 @@ code { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; word-b
 .pill.ok { color: var(--ok); } .pill.off { color: var(--off); }
 .sev { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 4px; border: 1px solid currentColor; flex: none; }
 .sev.BREAKING { color: var(--breaking); } .sev.WARNING { color: var(--warning); } .sev.SAFE { color: var(--safe); }
+.tabs { margin-left: auto; display: flex; gap: 4px; }
+.tabs button { background: none; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 12px; cursor: pointer; font: inherit; }
+.tabs button.on { background: var(--card); border-color: var(--fg); }
+details { border-top: 1px solid var(--line); padding: 8px 0; }
+summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+.tree { list-style: none; margin: 0 0 0 14px; padding: 0 0 0 10px; border-left: 1px solid var(--line); }
+.row { display: flex; gap: 10px; align-items: baseline; padding: 2px 0; }
+.row.hit { background: color-mix(in srgb, var(--breaking) 14%, transparent); border-radius: 4px; padding-left: 4px; }

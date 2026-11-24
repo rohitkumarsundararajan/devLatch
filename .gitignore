@@ -8,3 +8,6 @@ scanner/node_modules/
 
 *.exe
 dist/
+
+web/node_modules/
+!internal/webui/dist/

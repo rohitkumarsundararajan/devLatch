@@ -20,6 +20,7 @@ import (
 	"github.com/rohitkumarsundararajan/devlatch/internal/proxy"
 	"github.com/rohitkumarsundararajan/devlatch/internal/server"
 	"github.com/rohitkumarsundararajan/devlatch/internal/version"
+	"github.com/rohitkumarsundararajan/devlatch/internal/webui"
 )
 
 // driftScanner turns the proxy's learned schemas into dashboard events:
@@ -142,6 +143,7 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	hub := server.NewHub(500)
 	ui := server.New(server.Config{
 		Version: version.Version,
+		UI:      webui.Handler(),
 		Hub:     hub,
 		Endpoints: func() []server.EndpointInfo {
 			var out []server.EndpointInfo

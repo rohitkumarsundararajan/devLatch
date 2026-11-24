@@ -35,6 +35,8 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "watch":
 		return runWatch(ctx, args[1:], stdout, stderr)
+	case "ui":
+		return runUI(ctx, args[1:], stdout, stderr)
 	case "init":
 		return runInit(args[1:], stdout, stderr)
 	case "record":
@@ -79,6 +81,7 @@ Commands:
   impact    list frontend files that read a drifted field
   fix       rename drifted fields in frontend code (preview, --apply, --pr)
   probe     GET an API directly (no proxy) to record or check its contract
+  ui        run the proxy plus a local dashboard API and live event stream
   watch     run a proxy and print the shapes it learns (no files written)
   version   print the version
   help      show this help

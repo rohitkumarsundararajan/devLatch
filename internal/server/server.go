@@ -99,6 +99,7 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 		"endpoints":     eps,
 		"last_event_id": s.cfg.Hub.LastID(),
 		"token":         s.act.token,
+		"actions":       map[string]bool{"impact": s.cfg.Actions.Impact != nil, "fix": s.cfg.Actions.FixPreview != nil && s.cfg.Actions.FixApply != nil, "approve": s.cfg.Actions.Approve != nil},
 		"drift_events":  len(s.cfg.Hub.Recent("drift", 0)),
 	})
 }

@@ -26,7 +26,7 @@ func TestEventsStreamLive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	sc := bufio.NewScanner(resp.Body)
 	if !sc.Scan() || !strings.HasPrefix(sc.Text(), ": connected") {
 		t.Fatalf("no connected comment, got %q", sc.Text())
@@ -79,7 +79,7 @@ func TestReplayStateAndHostGuard(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&st); err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if len(st.Endpoints) != 1 || st.LastEventID != 3 || st.DriftEvents != 3 {
 		t.Fatalf("state = %+v", st)
 	}
@@ -90,7 +90,7 @@ func TestReplayStateAndHostGuard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r2.Body.Close()
+	_ = r2.Body.Close()
 	if r2.StatusCode != http.StatusForbidden {
 		t.Fatalf("foreign host status = %d", r2.StatusCode)
 	}
@@ -103,7 +103,7 @@ func TestReplayStateAndHostGuard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer r3.Body.Close()
+	defer func() { _ = r3.Body.Close() }()
 	var ids []string
 	sc := bufio.NewScanner(r3.Body)
 	for sc.Scan() {

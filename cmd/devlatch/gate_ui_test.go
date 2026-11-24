@@ -83,7 +83,7 @@ func hitProxy(t *testing.T, addr string, n int) {
 			t.Fatal(err)
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -100,7 +100,7 @@ func waitEndpointKey(t *testing.T, uiAddr string) string {
 				} `json:"endpoints"`
 			}
 			_ = json.NewDecoder(resp.Body).Decode(&st)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if len(st.Endpoints) > 0 && st.Endpoints[0].Responses >= 3 {
 				return st.Endpoints[0].Key
 			}
@@ -166,7 +166,7 @@ func TestGateUIDriftArrivesLive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	hitProxy(t, r2.proxyAddr, 5)
 
@@ -203,7 +203,7 @@ func TestGateUIDriftArrivesLive(t *testing.T) {
 		Drifts []json.RawMessage `json:"drifts"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&dr)
-	r.Body.Close()
+	_ = r.Body.Close()
 	if len(dr.Drifts) == 0 {
 		t.Fatal("/api/drifts is empty after a drift event")
 	}
@@ -211,7 +211,7 @@ func TestGateUIDriftArrivesLive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Body.Close()
+	_ = c.Body.Close()
 	if c.StatusCode != http.StatusOK {
 		t.Fatalf("/api/contract status = %d", c.StatusCode)
 	}

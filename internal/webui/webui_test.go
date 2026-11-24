@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -29,5 +30,17 @@ func TestServesIndexAndFallback(t *testing.T) {
 	}
 	if code, _ := get(t, h, "/api/nope"); code != 404 {
 		t.Fatalf("api path = %d, want 404", code)
+	}
+}
+
+func TestShipsRealBuild(t *testing.T) {
+	h := Handler()
+	_, body := get(t, h, "/")
+	m := regexp.MustCompile(`src="\./(assets/[^"]+\.js)"`).FindStringSubmatch(body)
+	if m == nil {
+		t.Fatal("dist/index.html has no JS bundle: run npm run build in web/ and commit internal/webui/dist")
+	}
+	if code, _ := get(t, h, "/"+m[1]); code != 200 {
+		t.Fatalf("bundle %s = %d, want 200", m[1], code)
 	}
 }

@@ -37,4 +37,4 @@ reconnecting. The proxy is never slowed by the dashboard.
 
 ## Not here yet
 
-The browser UI (P11), approve-from-UI, impact and fix views and OS alerts (P12).
+Approve-from-UI, impact and fix views and OS alerts (P12).

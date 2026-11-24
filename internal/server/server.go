@@ -23,6 +23,7 @@ type Config struct {
 	Endpoints func() []EndpointInfo
 	Contract  func() (any, error)
 	Heartbeat time.Duration
+	UI        http.Handler
 }
 
 type Server struct{ cfg Config }
@@ -46,6 +47,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/drifts", s.drifts)
 	mux.HandleFunc("GET /api/contract", s.contract)
 	mux.HandleFunc("GET /api/events", s.events)
+	if s.cfg.UI != nil {
+		mux.Handle("GET /", s.cfg.UI)
+	}
 	return hostGuard(mux)
 }
 

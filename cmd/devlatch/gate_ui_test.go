@@ -216,3 +216,29 @@ func TestGateUIDriftArrivesLive(t *testing.T) {
 		t.Fatalf("/api/contract status = %d", c.StatusCode)
 	}
 }
+
+// Gate for P11: the dashboard page and the API come from the same local port.
+func TestGateUIServedWithAPI(t *testing.T) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer backend.Close()
+	r := startUI(t, backend.URL)
+	defer r.stop()
+
+	get := func(p string) (int, string) {
+		resp, err := http.Get("http://" + r.uiAddr + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+	if code, body := get("/"); code != http.StatusOK || !strings.Contains(body, `id="root"`) {
+		t.Fatalf("/ = %d %q", code, body)
+	}
+	if code, body := get("/api/health"); code != http.StatusOK || !strings.Contains(body, `"ok":true`) {
+		t.Fatalf("/api/health = %d %q", code, body)
+	}
+}

@@ -189,7 +189,7 @@ func TestGateUIActionsEndToEnd(t *testing.T) {
 
 	q := url.Values{"endpoint": {got.Endpoint}, "path": {got.Path}}.Encode()
 	code, b := apiDo(t, "GET", r2.uiAddr, "/api/impact?"+q, "", "")
-	if code == http.StatusInternalServerError && strings.Contains(string(b), "Cannot find") {
+	if code == http.StatusInternalServerError && strings.Contains(string(b), "scanner dependencies missing") {
 		t.Skipf("scanner dependencies are not installed: %s", b)
 	}
 	if code != http.StatusOK {

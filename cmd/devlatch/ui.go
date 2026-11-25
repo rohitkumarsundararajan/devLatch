@@ -234,7 +234,7 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 				if out.Hits == nil {
 					out.Hits = []impact.Hit{}
 				}
-				out.FileCount = out.Result.Files()
+				out.FileCount = out.Files()
 				return out, nil
 			}
 			fixRun := func(ep, p, to string, apply bool) (any, error) {

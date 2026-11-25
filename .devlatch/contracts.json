@@ -1,0 +1,198 @@
+{
+  "schemaVersion": "1.0.0",
+  "generated_at": "2026-11-25T03:55:18Z",
+  "tool_version": "dev",
+  "approved_by": "user",
+  "approved_at": "2026-11-25T03:55:18Z",
+  "endpoints": {
+    "GET /api/v1/orders 200": {
+      "sample_count": 5,
+      "schema": {
+        "kinds": [
+          "OBJECT"
+        ],
+        "properties": {
+          "orders": {
+            "order": 1,
+            "required": true,
+            "node": {
+              "kinds": [
+                "ARRAY"
+              ],
+              "element": {
+                "kinds": [
+                  "OBJECT"
+                ],
+                "properties": {
+                  "balance": {
+                    "order": 1,
+                    "required": true,
+                    "node": {
+                      "kinds": [
+                        "NUMBER"
+                      ]
+                    }
+                  },
+                  "id": {
+                    "order": 2,
+                    "required": true,
+                    "node": {
+                      "kinds": [
+                        "STRING"
+                      ]
+                    }
+                  },
+                  "items": {
+                    "order": 3,
+                    "required": true,
+                    "node": {
+                      "kinds": [
+                        "INTEGER"
+                      ]
+                    }
+                  },
+                  "tags": {
+                    "order": 4,
+                    "required": true,
+                    "node": {
+                      "kinds": [
+                        "ARRAY"
+                      ],
+                      "element": {
+                        "kinds": [
+                          "STRING"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "order": 2,
+            "required": true,
+            "node": {
+              "kinds": [
+                "INTEGER"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "GET /api/v1/stats/daily 200": {
+      "sample_count": 5,
+      "schema": {
+        "kinds": [
+          "OBJECT"
+        ],
+        "properties": {
+          "by_day": {
+            "order": 1,
+            "required": true,
+            "node": {
+              "kinds": [
+                "MAP"
+              ],
+              "map_value": {
+                "kinds": [
+                  "OBJECT"
+                ],
+                "properties": {
+                  "orders": {
+                    "order": 1,
+                    "required": true,
+                    "node": {
+                      "kinds": [
+                        "INTEGER"
+                      ]
+                    }
+                  },
+                  "revenue": {
+                    "order": 2,
+                    "required": true,
+                    "node": {
+                      "kinds": [
+                        "NUMBER"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "GET /api/v1/users/{id} 200": {
+      "sample_count": 5,
+      "schema": {
+        "kinds": [
+          "OBJECT"
+        ],
+        "properties": {
+          "email": {
+            "order": 1,
+            "required": true,
+            "node": {
+              "kinds": [
+                "STRING"
+              ]
+            }
+          },
+          "id": {
+            "order": 2,
+            "required": true,
+            "node": {
+              "kinds": [
+                "STRING"
+              ]
+            }
+          },
+          "nickname": {
+            "order": 3,
+            "required": true,
+            "node": {
+              "kinds": [
+                "STRING"
+              ]
+            }
+          },
+          "permissions": {
+            "order": 4,
+            "required": true,
+            "node": {
+              "kinds": [
+                "ARRAY"
+              ],
+              "element": {
+                "kinds": [
+                  "STRING"
+                ]
+              }
+            }
+          },
+          "role_id": {
+            "order": 5,
+            "required": true,
+            "node": {
+              "kinds": [
+                "INTEGER"
+              ]
+            }
+          },
+          "user_name": {
+            "order": 6,
+            "required": true,
+            "node": {
+              "kinds": [
+                "STRING"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

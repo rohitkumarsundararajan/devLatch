@@ -12,8 +12,11 @@ type Props = {
 
 export default function Detail({ item, state, onClose, onApproved }: Props) {
   const v = item.v;
-  const to = v.rename_to ?? "";
-  const canFix = state.actions.fix && IDENT.test(to);
+  const lastSeg = (p: string) => p.slice(p.lastIndexOf(".") + 1);
+  const parentOf = (p: string) => p.slice(0, p.lastIndexOf("."));
+  const to = v.rename_to ? lastSeg(v.rename_to) : "";
+  const sameParent = !!v.rename_from && !!v.rename_to && parentOf(v.rename_from) === parentOf(v.rename_to);
+  const canFix = state.actions.fix && sameParent && IDENT.test(to);
 
   const [impact, setImpact] = useState<Impact | null>(null);
   const [impactErr, setImpactErr] = useState("");
@@ -143,7 +146,13 @@ export default function Detail({ item, state, onClose, onApproved }: Props) {
       {state.actions.fix && v.rename_to && (
         <>
           <h3>Fix preview</h3>
-          {!canFix && <p className="muted">&quot;{to}&quot; is not a valid field name, so no automatic fix.</p>}
+          {!canFix && (
+            <p className="muted">
+              {sameParent
+                ? `"${to}" is not a valid field name, so no automatic fix.`
+                : "This rename moves the field to a different parent, so it cannot be fixed automatically."}
+            </p>
+          )}
           {previewErr && <p className="error">{previewErr}</p>}
           {canFix && !preview && !previewErr && !msg && <p className="muted">Preparing preview...</p>}
           {preview && preview.edits === 0 && <p className="muted">Nothing to change: no usages of the old field were found.</p>}

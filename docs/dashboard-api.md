@@ -35,6 +35,32 @@ events it missed (the last 500 are kept in memory), then live ones. Each drift
 is reported once per run. A slow client may miss events and recover by
 reconnecting. The proxy is never slowed by the dashboard.
 
-## Not here yet
+## Actions
 
-Approve-from-UI, impact and fix views and OS alerts (P12).
+| Method and path | Does |
+| --- | --- |
+| `GET /api/impact?endpoint=&path=` | frontend files and lines that read the drifted field (needs `--frontend`) |
+| `GET /api/fix/preview?endpoint=&path=&to=` | the rename as before and after lines, nothing is written |
+| `POST /api/fix/apply` | writes the rename into the frontend (body: endpoint, path, to) |
+| `POST /api/approve` | accepts live traffic as the contract (body: `{"endpoint": "..."}`, empty means every endpoint with live traffic) |
+
+Impact and fix need `--frontend <folder>` (or `--tsconfig`) and the scanner;
+without them the endpoints answer 501 and `GET /api/state` reports
+`actions.impact` and `actions.fix` as false.
+
+Requests that change files (the two POST endpoints) must send
+`Content-Type: application/json`, an `Origin` that matches the host (if the
+browser sends one) and the header `X-DevLatch-Token`. The token is random per
+run and only readable from `GET /api/state`, which another website cannot read,
+so a page in your browser cannot rewrite your files. A successful action is
+published on the stream as an `action` event.
+
+Approving writes `.devlatch/contracts.json` (commit it to git) and clears the
+drift already reported for those endpoints.
+
+## Desktop notifications
+
+`devlatch ui` shows an OS notification when breaking drift is found, at most
+one every 10 seconds. Use `--no-notify` to turn it off. If the system cannot
+show one (for example Linux without a notification service), a single warning
+is printed and everything else keeps working.

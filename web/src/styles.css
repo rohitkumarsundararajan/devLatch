@@ -35,3 +35,20 @@ summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
 .tree { list-style: none; margin: 0 0 0 14px; padding: 0 0 0 10px; border-left: 1px solid var(--line); }
 .row { display: flex; gap: 10px; align-items: baseline; padding: 2px 0; }
 .row.hit { background: color-mix(in srgb, var(--breaking) 14%, transparent); border-radius: 4px; padding-left: 4px; }
+
+.btn { background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 12px; cursor: pointer; font: inherit; }
+.btn:hover:not(:disabled) { border-color: var(--fg); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.primary { border-color: var(--ok); color: var(--ok); }
+.banner { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; cursor: pointer; }
+.detail { margin-top: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.detail h3 { font-size: 14px; margin: 16px 0 4px; }
+.click { cursor: pointer; }
+.click:hover, .click.sel { background: color-mix(in srgb, var(--fg) 6%, transparent); }
+pre { margin: 4px 0 0; padding: 4px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; overflow-x: auto; font-size: 12.5px; }
+pre.del { color: var(--breaking); }
+pre.add { color: var(--ok); }
+.error { color: var(--off); }
+.ok-text { color: var(--ok); }
+.actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }

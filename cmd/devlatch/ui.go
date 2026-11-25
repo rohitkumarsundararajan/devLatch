@@ -11,12 +11,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/rohitkumarsundararajan/devlatch/internal/config"
 	"github.com/rohitkumarsundararajan/devlatch/internal/contract"
 	"github.com/rohitkumarsundararajan/devlatch/internal/diff"
+	"github.com/rohitkumarsundararajan/devlatch/internal/fix"
+	"github.com/rohitkumarsundararajan/devlatch/internal/impact"
 	"github.com/rohitkumarsundararajan/devlatch/internal/infer"
+	"github.com/rohitkumarsundararajan/devlatch/internal/notify"
 	"github.com/rohitkumarsundararajan/devlatch/internal/proxy"
 	"github.com/rohitkumarsundararajan/devlatch/internal/server"
 	"github.com/rohitkumarsundararajan/devlatch/internal/version"
@@ -27,6 +34,7 @@ import (
 // "endpoint" when a new endpoint is first seen, "drift" for each violation
 // against the approved contract that has not been reported before.
 type driftScanner struct {
+	mu        sync.Mutex
 	base      map[string]*infer.Node
 	opt       diff.Options
 	hub       *server.Hub
@@ -41,6 +49,8 @@ func newDriftScanner(base map[string]*infer.Node, opt diff.Options, hub *server.
 
 // scan runs one pass and returns the violations that were new in this pass.
 func (d *driftScanner) scan(store *infer.Store) []diff.Violation {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	snap := store.Snapshot()
 	total := 0
 	for _, ep := range snap {
@@ -69,7 +79,87 @@ func (d *driftScanner) scan(store *infer.Store) []diff.Violation {
 	return fresh
 }
 
-// runUI runs the proxy plus the dashboard API (localhost only) until Ctrl+C.
+// rebase swaps in a new approved contract and forgets the drift already
+// reported for the given endpoints (all of them when none are given).
+func (d *driftScanner) rebase(base map[string]*infer.Node, endpoints []string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.base = base
+	if len(endpoints) == 0 {
+		d.seenDrift = map[string]bool{}
+	}
+	for k := range d.seenDrift {
+		for _, e := range endpoints {
+			if strings.HasPrefix(k, e+"|") {
+				delete(d.seenDrift, k)
+			}
+		}
+	}
+	d.lastTotal = -1
+}
+
+// approveLive accepts what the proxy has seen as the contract: for one
+// endpoint, or for all of them when endpoint is empty.
+func approveLive(store *infer.Store, ds *driftScanner, endpoint string, minSamples int) (any, error) {
+	live := collapseEndpoints(store.Snapshot())
+	if endpoint != "" {
+		n, ok := live[endpoint]
+		if !ok {
+			return nil, fmt.Errorf("endpoint %q has no live traffic yet", endpoint)
+		}
+		live = map[string]*infer.Node{endpoint: n}
+	}
+	if len(live) == 0 {
+		return nil, errors.New("no live traffic to approve")
+	}
+	f := contract.FromNodes(live, minSamples, version.Version, time.Now())
+	if old, err := contract.Load(config.ContractPath()); err == nil {
+		if old.Endpoints == nil {
+			old.Endpoints = map[string]*contract.Endpoint{}
+		}
+		for k, ep := range f.Endpoints {
+			old.Endpoints[k] = ep
+		}
+		f = old
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	f.ApprovedBy = approver()
+	f.ApprovedAt = time.Now().UTC().Format(time.RFC3339)
+	if err := os.MkdirAll(config.Dir, 0o755); err != nil {
+		return nil, err
+	}
+	if err := contract.Save(config.ContractPath(), f); err != nil {
+		return nil, err
+	}
+	keys := make([]string, 0, len(live))
+	for k := range live {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	ds.rebase(f.ToNodes(), keys)
+	return map[string]any{"approved": keys, "contract_endpoints": len(f.Endpoints)}, nil
+}
+
+type impactOut struct {
+	impact.Result
+	FileCount int `json:"files"`
+}
+
+func breakingSummary(vs []diff.Violation) (int, string) {
+	n, first := 0, ""
+	for _, v := range vs {
+		if v.Severity == diff.SeverityBreaking {
+			n++
+			if first == "" {
+				first = v.Endpoint + " " + v.Path
+			}
+		}
+	}
+	return n, first
+}
+
+// runUI runs the proxy plus the dashboard (localhost only) until Ctrl+C.
 func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	cfg, _ := config.Load()
 	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
@@ -81,6 +171,10 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	renames := fs.Bool("renames", true, "report likely renames as POSSIBLE_RENAME")
 	ignore := fs.String("ignore", "", "comma-separated path prefixes to forward but never analyze")
 	interval := fs.Duration("interval", time.Second, "how often to compare live traffic with the contract")
+	frontend := fs.String("frontend", "", "frontend project folder (enables the impact and fix views)")
+	tsconfig := fs.String("tsconfig", "", "path to tsconfig.json (default <frontend>/tsconfig.json)")
+	scannerPath := fs.String("scanner", "", "path to scanner/src/cli.mjs (auto-detected)")
+	noNotify := fs.Bool("no-notify", false, "do not show desktop notifications for breaking drift")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return exitOK
@@ -105,10 +199,68 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if f, err := contract.Load(config.ContractPath()); err == nil {
 		base = f.ToNodes()
 	} else if errors.Is(err, os.ErrNotExist) {
-		_, _ = fmt.Fprintln(stderr, "devlatch ui: no approved contract yet; learning endpoints only (run devlatch record, then devlatch approve)")
+		_, _ = fmt.Fprintln(stderr, "devlatch ui: no approved contract yet; learning endpoints only (approve from the dashboard once traffic is learned)")
 	} else {
 		_, _ = fmt.Fprintln(stderr, "devlatch ui:", err)
 		return exitError
+	}
+
+	// Impact and fix need the frontend folder and the scanner.
+	var acts server.Actions
+	frontendNote := "Impact and fix views are off (pass --frontend <folder> to enable them)."
+	ts := *tsconfig
+	if ts == "" && *frontend != "" {
+		ts = filepath.Join(*frontend, "tsconfig.json")
+	}
+	if ts != "" {
+		if _, err := os.Stat(ts); err != nil {
+			_, _ = fmt.Fprintln(stderr, "devlatch ui:", err)
+			return exitError
+		}
+		script, err := impact.FindScanner(*scannerPath)
+		if err != nil {
+			_, _ = fmt.Fprintln(stderr, "devlatch ui: impact and fix views are off:", err)
+		} else {
+			frontendNote = "Impact and fix views use " + ts
+			acts.Impact = func(ep, p string) (any, error) {
+				rs, err := impact.Scan(script, ts, []impact.Drift{{Endpoint: ep, Path: p}})
+				if err != nil {
+					return nil, err
+				}
+				out := impactOut{Result: impact.Result{Endpoint: ep, Path: p}}
+				if len(rs) > 0 {
+					out.Result = rs[0]
+				}
+				if out.Hits == nil {
+					out.Hits = []impact.Hit{}
+				}
+				out.FileCount = out.Files()
+				return out, nil
+			}
+			fixRun := func(ep, p, to string, apply bool) (any, error) {
+				if !fixIdentRe.MatchString(to) {
+					return nil, fmt.Errorf("%q is not a valid field name", to)
+				}
+				res, err := fix.Run(script, ts, []fix.Rename{{Endpoint: ep, Path: p, To: to}}, fix.Options{Apply: apply})
+				if err != nil {
+					return nil, err
+				}
+				if apply {
+					if res.Reverted {
+						return nil, errors.New("the rename would increase TypeScript errors, so nothing was changed")
+					}
+					if !res.Applied {
+						return nil, errors.New("nothing was applied")
+					}
+				}
+				if res.Changes == nil {
+					res.Changes = []fix.Change{}
+				}
+				return res, nil
+			}
+			acts.FixPreview = func(ep, p, to string) (any, error) { return fixRun(ep, p, to, false) }
+			acts.FixApply = func(ep, p, to string) (any, error) { return fixRun(ep, p, to, true) }
+		}
 	}
 
 	store := infer.NewStore(infer.DefaultConfig())
@@ -141,10 +293,14 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 
 	hub := server.NewHub(500)
+	ds := newDriftScanner(base, diff.Options{MinSamples: *minSamples, Renames: *renames}, hub)
+	acts.Approve = func(ep string) (any, error) { return approveLive(store, ds, ep, *minSamples) }
+
 	ui := server.New(server.Config{
 		Version: version.Version,
-		UI:      webui.Handler(),
 		Hub:     hub,
+		UI:      webui.Handler(),
+		Actions: acts,
 		Endpoints: func() []server.EndpointInfo {
 			var out []server.EndpointInfo
 			for _, ep := range store.Snapshot() {
@@ -170,8 +326,14 @@ func runUI(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	hub.Publish("status", map[string]any{"state": "started", "target": u.String(), "contract": base != nil})
 	_, _ = fmt.Fprintf(stdout, "DevLatch ui: dashboard API http://%s  (events: /api/events)\n", uln.Addr())
 	_, _ = fmt.Fprintf(stdout, "Point your app at the proxy http://%s -> %s. Press Ctrl+C to stop.\n", pln.Addr(), u)
+	_, _ = fmt.Fprintln(stdout, frontendNote)
 
-	ds := newDriftScanner(base, diff.Options{MinSamples: *minSamples, Renames: *renames}, hub)
+	var nf *notify.Notifier
+	if !*noNotify {
+		nf = notify.New(10 * time.Second)
+	}
+	var warnOnce sync.Once
+
 	code := exitOK
 	tick := time.NewTicker(*interval)
 	defer tick.Stop()
@@ -187,8 +349,17 @@ loop:
 			}
 			break loop
 		case <-tick.C:
-			for _, v := range ds.scan(store) {
+			fresh := ds.scan(store)
+			for _, v := range fresh {
 				_, _ = fmt.Fprintf(stdout, "drift: %s %s %s\n", v.Severity, v.Type, v.Endpoint+" "+v.Path)
+			}
+			if n, first := breakingSummary(fresh); nf != nil && n > 0 {
+				msg := fmt.Sprintf("%d breaking change(s), first: %s", n, first)
+				go func() {
+					if _, err := nf.Notify("DevLatch: breaking API change", msg); err != nil {
+						warnOnce.Do(func() { _, _ = fmt.Fprintln(stderr, "devlatch ui: desktop notification failed:", err) })
+					}
+				}()
 			}
 		}
 	}

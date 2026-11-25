@@ -24,9 +24,13 @@ type Config struct {
 	Contract  func() (any, error)
 	Heartbeat time.Duration
 	UI        http.Handler
+	Actions   Actions
 }
 
-type Server struct{ cfg Config }
+type Server struct {
+	cfg Config
+	act *actionState
+}
 
 func New(cfg Config) *Server {
 	if cfg.Hub == nil {
@@ -35,7 +39,7 @@ func New(cfg Config) *Server {
 	if cfg.Heartbeat <= 0 {
 		cfg.Heartbeat = 15 * time.Second
 	}
-	return &Server{cfg: cfg}
+	return &Server{cfg: cfg, act: newActionState()}
 }
 
 func (s *Server) Hub() *Hub { return s.cfg.Hub }
@@ -47,6 +51,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/drifts", s.drifts)
 	mux.HandleFunc("GET /api/contract", s.contract)
 	mux.HandleFunc("GET /api/events", s.events)
+	s.registerActions(mux)
 	if s.cfg.UI != nil {
 		mux.Handle("GET /", s.cfg.UI)
 	}
@@ -93,6 +98,8 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 		"version":       s.cfg.Version,
 		"endpoints":     eps,
 		"last_event_id": s.cfg.Hub.LastID(),
+		"token":         s.act.token,
+		"actions":       map[string]bool{"impact": s.cfg.Actions.Impact != nil, "fix": s.cfg.Actions.FixPreview != nil && s.cfg.Actions.FixApply != nil, "approve": s.cfg.Actions.Approve != nil},
 		"drift_events":  len(s.cfg.Hub.Recent("drift", 0)),
 	})
 }

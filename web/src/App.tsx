@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { DriftItem, State, Violation, getState } from "./api";
+import { DriftItem, State, Violation, getState, msgOf, post } from "./api";
 import Contract from "./Contract";
+import Detail from "./Detail";
 
 const MAX_FEED = 200;
 
@@ -20,6 +21,8 @@ export default function App() {
   const [live, setLive] = useState(false);
   const [feed, setFeed] = useState<DriftItem[]>([]);
   const [tab, setTab] = useState<"live" | "contract">("live");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     let stop = false;
@@ -40,6 +43,12 @@ export default function App() {
       setFeed((f) => (f.some((x) => x.id === id) ? f : [item, ...f].slice(0, MAX_FEED)));
     });
     es.addEventListener("endpoint", refresh);
+    es.addEventListener("action", (e) => {
+      const a = JSON.parse((e as MessageEvent).data) as { kind: string; endpoint: string };
+      if (a.kind === "approve") {
+        setFeed((f) => (a.endpoint ? f.filter((x) => x.v.endpoint !== a.endpoint) : []));
+      }
+    });
 
     return () => {
       stop = true;
@@ -49,6 +58,23 @@ export default function App() {
   }, []);
 
   const drifted = useMemo(() => new Set(feed.map((d) => `${d.v.endpoint}|${d.v.path}`)), [feed]);
+  const selected = feed.find((d) => d.id === selectedId) ?? null;
+
+  async function approveAll() {
+    if (!state) return;
+    const ok = window.confirm(
+      `Accept the current live shape of ${state.endpoints.length} endpoint(s) as the approved contract? ` +
+        "Endpoints without live traffic keep their existing contract.",
+    );
+    if (!ok) return;
+    try {
+      await post("/api/approve", state.token, { endpoint: "" });
+      setFeed([]);
+      setNotice("Approved the current live traffic as the contract.");
+    } catch (e) {
+      setNotice(`Approve failed: ${msgOf(e)}`);
+    }
+  }
 
   return (
     <div className="app">
@@ -66,45 +92,76 @@ export default function App() {
         </nav>
       </header>
 
+      {notice && (
+        <div className="banner" onClick={() => setNotice("")}>
+          {notice} <span className="muted">(click to dismiss)</span>
+        </div>
+      )}
+
       {tab === "contract" ? (
         <Contract drifted={drifted} />
       ) : (
-        <main>
-          <section>
-            <h2>Endpoints ({state?.endpoints.length ?? 0})</h2>
-            {state && state.endpoints.length === 0 && (
-              <p className="muted">No traffic yet. Point your app at the DevLatch proxy.</p>
-            )}
-            <ul className="list">
-              {state?.endpoints.map((e) => (
-                <li key={e.key}>
-                  <code>{e.key}</code>
-                  <span className="muted">{e.responses} responses</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+        <>
+          <main>
+            <section>
+              <div className="detail-head">
+                <h2>Endpoints ({state?.endpoints.length ?? 0})</h2>
+                {state?.actions.approve && state.endpoints.length > 0 && (
+                  <button className="btn" onClick={approveAll}>
+                    Approve all live traffic
+                  </button>
+                )}
+              </div>
+              {state && state.endpoints.length === 0 && (
+                <p className="muted">No traffic yet. Point your app at the DevLatch proxy.</p>
+              )}
+              <ul className="list">
+                {state?.endpoints.map((e) => (
+                  <li key={e.key}>
+                    <code>{e.key}</code>
+                    <span className="muted">{e.responses} responses</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-          <section>
-            <h2>Drift feed ({feed.length})</h2>
-            {feed.length === 0 && <p className="muted">No drift detected.</p>}
-            <ul className="list">
-              {feed.map((d) => (
-                <li key={d.id}>
-                  <span className={`sev ${d.v.severity}`}>{d.v.severity}</span>
-                  <div>
+            <section>
+              <h2>Drift feed ({feed.length})</h2>
+              {feed.length === 0 && <p className="muted">No drift detected.</p>}
+              <ul className="list">
+                {feed.map((d) => (
+                  <li
+                    key={d.id}
+                    className={d.id === selectedId ? "click sel" : "click"}
+                    onClick={() => setSelectedId(d.id)}
+                  >
+                    <span className={`sev ${d.v.severity}`}>{d.v.severity}</span>
                     <div>
-                      <strong>{d.v.type}</strong> <code>{d.v.path}</code>
+                      <div>
+                        <strong>{d.v.type}</strong> <code>{d.v.path}</code>
+                      </div>
+                      <div className="muted">
+                        <code>{d.v.endpoint}</code> {describe(d.v)}
+                      </div>
                     </div>
-                    <div className="muted">
-                      <code>{d.v.endpoint}</code> {describe(d.v)}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </main>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </main>
+          {selected && state && (
+            <Detail
+              item={selected}
+              state={state}
+              onClose={() => setSelectedId(null)}
+              onApproved={(ep) => {
+                setFeed((f) => f.filter((x) => x.v.endpoint !== ep));
+                setSelectedId(null);
+                setNotice(`Approved ${ep} as the new contract.`);
+              }}
+            />
+          )}
+        </>
       )}
     </div>
   );

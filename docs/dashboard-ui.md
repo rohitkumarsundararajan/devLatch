@@ -22,3 +22,18 @@ so `go install` needs no Node.
 
 Run `devlatch ui` in another terminal so the dev server has an API to talk to.
 A test fails if the committed build is missing or is only the placeholder.
+## Acting on a drift
+
+Click an entry in the drift feed to open its detail:
+
+- **Affected frontend code**: every place that reads the drifted field.
+- **Fix preview**: for a rename within the same parent, the exact before and
+  after lines. **Apply fix to frontend** writes them (after a confirmation) and
+  reports the TypeScript error count before and after; if errors would
+  increase, nothing is changed.
+- **Approve this endpoint as the new contract**: accepts the current live
+  shape. **Approve all live traffic** on the Live tab does it for every
+  endpoint, which is also how you create the first contract.
+
+Start `devlatch ui` with `--frontend <folder>` to enable the impact and fix
+parts. Approving needs no frontend.

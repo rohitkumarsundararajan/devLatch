@@ -11,3 +11,5 @@ dist/
 
 web/node_modules/
 !internal/webui/dist/
+
+/.devlatch/

@@ -54,7 +54,7 @@ func startUI(t *testing.T, backend string) *uiRun {
 	done := make(chan int, 1)
 	go func() {
 		done <- runUI(ctx, []string{"--target", backend, "--port", "0", "--ui-port", "0",
-			"--interval", "100ms", "--min-samples", "3"}, out, io.Discard)
+			"--interval", "100ms", "--min-samples", "3", "--no-notify"}, out, io.Discard)
 	}()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) && !strings.Contains(out.String(), "Press Ctrl+C") {

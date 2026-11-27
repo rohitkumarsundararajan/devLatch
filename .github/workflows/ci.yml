@@ -39,12 +39,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            go: '1.22'
+          - os: macos-latest
+            go: '1.24'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: ${{ matrix.go }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22

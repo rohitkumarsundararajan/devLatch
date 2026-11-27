@@ -13,3 +13,6 @@ web/node_modules/
 !internal/webui/dist/
 
 /.devlatch/
+
+web/test-results/
+web/e2e/out/

@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -55,9 +56,12 @@ func startDemo(t *testing.T, bin, mutate string) (string, func()) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
+	var once sync.Once
 	stop := func() {
-		_ = cmd.Process.Kill()
-		_, _ = cmd.Process.Wait()
+		once.Do(func() {
+			_ = cmd.Process.Kill()
+			_, _ = cmd.Process.Wait()
+		})
 	}
 	t.Cleanup(stop)
 	base := "http://" + addr

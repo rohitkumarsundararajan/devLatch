@@ -23,6 +23,8 @@ foreach ($t in $targets) {
   go build -trimpath -ldflags "-s -w -X $pkg=$Version" -o (Join-Path $stage $exe) ./cmd/devlatch
   if ($LASTEXITCODE -ne 0) { throw "build failed for $($t.os)/$($t.arch)" }
   Copy-Item LICENSE, README.md $stage
+  $sc = Join-Path $stage 'scanner'; New-Item -ItemType Directory -Path $sc | Out-Null
+  foreach ($i in 'src','package.json','package-lock.json') { if (Test-Path (Join-Path 'scanner' $i)) { Copy-Item -Recurse (Join-Path 'scanner' $i) $sc } }
   if ($t.os -eq "windows") { Compress-Archive -Path "$stage\*" -DestinationPath "$stage.zip" }
   else { tar -czf "$stage.tar.gz" -C $out $name }
   Remove-Item -Recurse -Force $stage

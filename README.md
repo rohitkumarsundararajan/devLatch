@@ -88,3 +88,8 @@ Run "devlatch COMMAND -h" for flags.
 ## License
 
 MIT
+## Impact and fix need Node
+
+devlatch impact and devlatch fix use the TypeScript scanner in the scanner/ folder (included in release archives). Install Node 22 or newer, then run 
+pm ci inside scanner/ once.
+

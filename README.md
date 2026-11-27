@@ -93,3 +93,22 @@ MIT
 devlatch impact and devlatch fix use the TypeScript scanner in the scanner/ folder (included in release archives). Install Node 22 or newer, then run 
 pm ci inside scanner/ once.
 
+
+## Platform support
+
+| Platform | Status |
+| --- | --- |
+| Linux (amd64, arm64) | Tested in CI: full test suite with the race detector, plus the browser test |
+| macOS (amd64, arm64) | Tested in CI: full test suite (built with Go 1.24 or newer) |
+| Windows (amd64) | Tested in CI: full test suite. Desktop toast notifications are untested |
+
+`devlatch impact`, `devlatch fix` and the dashboard impact view need Node 22 or newer and the bundled `scanner/` folder (run `npm ci` inside it once).
+
+## Limitations
+
+- JSON over plain HTTP only. HTTPS interception, GraphQL and non-JSON bodies are not supported.
+- DevLatch stores the structure of responses, never their values. It cannot see drift in values (for example a changed unit or a different currency).
+- Rename detection is heuristic. It reports confidence and evidence, and the accuracy numbers in docs/rename-detection.md come from an author-made labeled set, so real-world results may be lower.
+- The impact scanner and auto-fix understand TypeScript and JavaScript frontends. Name-only matches are shown but never auto-fixed. Numbers in docs/impact-accuracy.md come from author-made fixtures.
+- A learned contract is only as good as the traffic you recorded. Endpoints you did not exercise are not covered, and fields seen in fewer responses than `--min-samples` are not treated as required.
+- Probe mode only sends GET and HEAD requests, and credentials come from environment variables and are never written to disk.
